@@ -1,0 +1,94 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: alert-publisher
+  
+  # PostgreSQL Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/alert_publisher_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: alert-publisher-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://admin:admin@localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+# Alert Publisher Configuration
+alert:
+  publisher:
+    # Cell Broadcast Configuration
+    cell-broadcast:
+      enabled: true
+      api-url: https://telecom-api.example.com/cell-broadcast
+      api-key: ${CELL_BROADCAST_API_KEY:mock-api-key}
+      timeout-seconds: 30
+      retry-attempts: 3
+    
+    # Firebase Cloud Messaging Configuration
+    fcm:
+      enabled: true
+      credentials-path: ${FCM_CREDENTIALS_PATH:classpath:firebase-credentials.json}
+      timeout-seconds: 30
+      retry-attempts: 3
+    
+    # Alert Publishing Settings
+    batch-size: 100
+    parallel-processing: true
+    max-threads: 10
+
+# Kafka Topics
+kafka:
+  topics:
+    alerts-input: alerts.candidates
+    alerts-published: alerts.published
+    alerts-failed: alerts.failed
+
+# Logging Configuration
+logging:
+  level:
+    com.aiscientist.alert_publisher: DEBUG
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: DEBUG
