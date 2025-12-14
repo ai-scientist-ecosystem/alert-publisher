@@ -1,23 +1,19 @@
 package com.aiscientist.alert_publisher.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+import lombok.*;
+import java.time.Instant;
 
 /**
- * Entity representing an alert to be published
+ * Entity representing an alert publishing record (tracking)
  */
 @Entity
-@Table(name = "published_alerts")
+@Table(name = "published_alert")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PublishedAlert {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -38,10 +34,10 @@ public class PublishedAlert {
     private String details;
 
     @Column(nullable = false)
-    private LocalDateTime detectedAt;
+    private Instant detectedAt;
 
     @Column(nullable = false)
-    private LocalDateTime publishedAt;
+    private Instant publishedAt;
 
     // Publishing status
     @Column(nullable = false)
@@ -74,7 +70,7 @@ public class PublishedAlert {
     private Integer retryCount = 0;
 
     @Column
-    private LocalDateTime lastRetryAt;
+    private Instant lastRetryAt;
 
     public enum PublishStatus {
         PENDING,

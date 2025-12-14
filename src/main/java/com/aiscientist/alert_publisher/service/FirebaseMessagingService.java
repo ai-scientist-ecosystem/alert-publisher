@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -36,17 +37,18 @@ public class FirebaseMessagingService {
      */
     @Async
     public CompletableFuture<FcmResult> sendNotification(AlertMessage alert) {
+        String alertId = alert.getId() != null ? alert.getId().toString() : "UNKNOWN";
         if (!enabled) {
-            log.info("FCM is disabled. Skipping alert: {}", alert.getAlertId());
+            log.info("FCM is disabled. Skipping alert: {}", alertId);
             return CompletableFuture.completedFuture(FcmResult.builder()
                     .success(true)
-                    .messageId("SKIPPED-" + alert.getAlertId())
+                    .messageId("SKIPPED-" + alertId)
                     .recipientCount(0)
                     .message("FCM disabled")
                     .build());
         }
 
-        log.info("Sending FCM notification for alert: {}", alert.getAlertId());
+        log.info("Sending FCM notification for alert: {}", alertId);
 
         // Mock implementation for MVP - actual FCM will be implemented when Firebase is configured
         return simulateFcmNotification(alert);
@@ -57,6 +59,7 @@ public class FirebaseMessagingService {
      * In production, this will use actual Firebase Admin SDK
      */
     private CompletableFuture<FcmResult> simulateFcmNotification(AlertMessage alert) {
+        String alertId = alert.getId() != null ? alert.getId().toString() : "UNKNOWN";
         return CompletableFuture.supplyAsync(() -> {
             try {
                 // Simulate network delay
@@ -70,7 +73,7 @@ public class FirebaseMessagingService {
                     int recipientCount = calculateFcmRecipients(alert);
                     
                     log.info("FCM SUCCESS - MessageID: {}, Recipients: {}, AlertID: {}",
-                            messageId, recipientCount, alert.getAlertId());
+                            messageId, recipientCount, alertId);
                     
                     return FcmResult.builder()
                             .success(true)
@@ -81,7 +84,7 @@ public class FirebaseMessagingService {
                             .message("FCM notification sent successfully")
                             .build();
                 } else {
-                    log.error("FCM FAILED - AlertID: {}", alert.getAlertId());
+                    log.error("FCM FAILED - AlertID: {}", alertId);
                     return FcmResult.builder()
                             .success(false)
                             .messageId(null)
@@ -109,16 +112,20 @@ public class FirebaseMessagingService {
      * Build FCM message from alert
      */
     private Message buildFcmMessage(AlertMessage alert, String topic) {
+        String alertId = alert.getId() != null ? alert.getId().toString() : "UNKNOWN";
+        String message = alert.getDescription() != null ? alert.getDescription() : "Disaster alert";
+        String timestamp = alert.getTimestamp() != null ? alert.getTimestamp().toString() : Instant.now().toString();
+        
         return Message.builder()
                 .setTopic(topic)
                 .setNotification(Notification.builder()
                         .setTitle(buildNotificationTitle(alert))
-                        .setBody(alert.getMessage())
+                        .setBody(message)
                         .build())
-                .putData("alertId", alert.getAlertId())
+                .putData("alertId", alertId)
                 .putData("severity", alert.getSeverity())
                 .putData("alertType", alert.getAlertType())
-                .putData("detectedAt", alert.getDetectedAt().toString())
+                .putData("detectedAt", timestamp)
                 .setAndroidConfig(AndroidConfig.builder()
                         .setPriority(getPriority(alert.getSeverity()))
                         .setNotification(AndroidNotification.builder()

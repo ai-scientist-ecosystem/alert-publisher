@@ -5,21 +5,24 @@ import com.aiscientist.alert_publisher.repository.PublishedAlertRepository;
 import com.aiscientist.alert_publisher.service.AlertPublisherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 /**
  * REST API for alert publisher operations
+ * Only available when database is configured
  */
 @RestController
 @RequestMapping("/api/v1/published-alerts")
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnBean(PublishedAlertRepository.class)
 public class PublishedAlertController {
 
     private final PublishedAlertRepository publishedAlertRepository;
@@ -64,8 +67,8 @@ public class PublishedAlertController {
      */
     @GetMapping("/date-range")
     public ResponseEntity<List<PublishedAlert>> getAlertsByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
         return ResponseEntity.ok(publishedAlertRepository.findByPublishedAtBetween(startDate, endDate));
     }
 
@@ -94,25 +97,25 @@ public class PublishedAlertController {
      * Get publishing statistics
      */
     @GetMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getStatistics(
+        public ResponseEntity<Map<String, Object>> getStatistics(
             @RequestParam(defaultValue = "24") int hours) {
-        LocalDateTime since = LocalDateTime.now().minusHours(hours);
-        
+        Instant since = Instant.now().minusSeconds(hours * 3600L);
+
         long totalPublished = publishedAlertRepository.countPublishedSince(since);
         long cellBroadcastSuccess = publishedAlertRepository.countCellBroadcastSuccessSince(since);
         long fcmSuccess = publishedAlertRepository.countFcmSuccessSince(since);
-        
+
         return ResponseEntity.ok(Map.of(
-                "period", hours + " hours",
-                "totalPublished", totalPublished,
-                "cellBroadcastSuccess", cellBroadcastSuccess,
-                "fcmSuccess", fcmSuccess,
-                "cellBroadcastSuccessRate", totalPublished > 0 
-                        ? String.format("%.2f%%", (cellBroadcastSuccess * 100.0 / totalPublished))
-                        : "0%",
-                "fcmSuccessRate", totalPublished > 0 
-                        ? String.format("%.2f%%", (fcmSuccess * 100.0 / totalPublished))
-                        : "0%"
+            "period", hours + " hours",
+            "totalPublished", totalPublished,
+            "cellBroadcastSuccess", cellBroadcastSuccess,
+            "fcmSuccess", fcmSuccess,
+            "cellBroadcastSuccessRate", totalPublished > 0 
+                ? String.format("%.2f%%", (cellBroadcastSuccess * 100.0 / totalPublished))
+                : "0%",
+            "fcmSuccessRate", totalPublished > 0 
+                ? String.format("%.2f%%", (fcmSuccess * 100.0 / totalPublished))
+                : "0%"
         ));
-    }
+        }
 }

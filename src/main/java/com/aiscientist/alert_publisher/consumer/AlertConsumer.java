@@ -21,26 +21,32 @@ public class AlertConsumer {
     private final AlertPublisherService alertPublisherService;
 
     @KafkaListener(
-            topics = "${kafka.topics.alerts-input}",
+            topics = {"${kafka.topics.alerts-critical}", "${kafka.topics.alerts-warning}"},
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void consumeAlert(
             @Payload AlertMessage alertMessage,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
-            @Header(KafkaHeaders.OFFSET) long offset) {
+            @Header(KafkaHeaders.OFFSET) long offset,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         
-        log.info("Consumed alert from Kafka - AlertID: {}, Severity: {}, Partition: {}, Offset: {}",
-                alertMessage.getAlertId(), 
+        log.info("Consumed alert from Kafka - Topic: {}, AlertID: {}, Severity: {}, Type: {}, Partition: {}, Offset: {}",
+                topic,
+                alertMessage.getId(), 
                 alertMessage.getSeverity(),
+                alertMessage.getAlertType(),
                 partition,
                 offset);
 
         try {
             alertPublisherService.publishAlert(alertMessage);
-            log.info("Successfully processed alert: {}", alertMessage.getAlertId());
+            log.info("Successfully processed alert: {} - {}", alertMessage.getId(), alertMessage.getAlertType());
         } catch (Exception e) {
-            log.error("Error processing alert {}: {}", alertMessage.getAlertId(), e.getMessage(), e);
+            log.error("Error processing alert {} ({}): {}", 
+                    alertMessage.getId(), 
+                    alertMessage.getAlertType(), 
+                    e.getMessage(), e);
             // In production, implement dead letter queue (DLQ) handling
         }
     }

@@ -7,10 +7,13 @@ spring:
   
   # PostgreSQL Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/alert_publisher_db
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://localhost:5433/alert_publisher_db
+    username: alert_publisher_user
+    password: publisher123
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 20000
   
   jpa:
     hibernate:
@@ -20,6 +23,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    open-in-view: false
+  
+  sql:
+    init:
+      mode: never
+      continue-on-error: true
   
   # Kafka Configuration
   kafka:
@@ -28,9 +40,12 @@ spring:
       group-id: alert-publisher-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.aiscientist.alert_publisher.dto.AlertMessage
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -82,7 +97,8 @@ alert:
 # Kafka Topics
 kafka:
   topics:
-    alerts-input: alerts.candidates
+    alerts-critical: alerts.critical
+    alerts-warning: alerts.warning
     alerts-published: alerts.published
     alerts-failed: alerts.failed
 

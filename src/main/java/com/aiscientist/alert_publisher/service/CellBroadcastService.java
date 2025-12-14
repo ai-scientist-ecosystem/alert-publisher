@@ -47,17 +47,18 @@ public class CellBroadcastService {
      */
     @Async
     public Mono<CellBroadcastResult> broadcast(AlertMessage alert) {
+        String alertId = alert.getId() != null ? alert.getId().toString() : "UNKNOWN";
         if (!enabled) {
-            log.info("Cell Broadcast is disabled. Skipping alert: {}", alert.getAlertId());
+            log.info("Cell Broadcast is disabled. Skipping alert: {}", alertId);
             return Mono.just(CellBroadcastResult.builder()
                     .success(true)
-                    .messageId("SKIPPED-" + alert.getAlertId())
+                    .messageId("SKIPPED-" + alertId)
                     .recipientCount(0)
                     .message("Cell Broadcast disabled")
                     .build());
         }
 
-        log.info("Broadcasting alert via Cell Broadcast: {}", alert.getAlertId());
+        log.info("Broadcasting alert via Cell Broadcast: {}", alertId);
 
         // Mock implementation - in production, this will call actual telecom API
         return simulateCellBroadcast(alert);
@@ -68,6 +69,7 @@ public class CellBroadcastService {
      * In production, this will be replaced with actual telecom API calls
      */
     private Mono<CellBroadcastResult> simulateCellBroadcast(AlertMessage alert) {
+        String alertId = alert.getId() != null ? alert.getId().toString() : "UNKNOWN";
         return Mono.fromCallable(() -> {
             // Simulate network delay
             Thread.sleep(1000);
@@ -80,7 +82,7 @@ public class CellBroadcastService {
                 int recipientCount = calculateRecipientCount(alert);
                 
                 log.info("Cell Broadcast SUCCESS - MessageID: {}, Recipients: {}, AlertID: {}",
-                        messageId, recipientCount, alert.getAlertId());
+                        messageId, recipientCount, alertId);
                 
                 return CellBroadcastResult.builder()
                         .success(true)
@@ -89,7 +91,7 @@ public class CellBroadcastService {
                         .message("Cell Broadcast sent successfully")
                         .build();
             } else {
-                log.error("Cell Broadcast FAILED - AlertID: {}", alert.getAlertId());
+                log.error("Cell Broadcast FAILED - AlertID: {}", alertId);
                 return CellBroadcastResult.builder()
                         .success(false)
                         .messageId(null)
@@ -114,14 +116,16 @@ public class CellBroadcastService {
      * Calculate estimated recipient count based on alert radius
      */
     private int calculateRecipientCount(AlertMessage alert) {
-        // Mock calculation based on radius
-        if (alert.getRadius() != null) {
-            // Assume 1000 people per km²
-            double area = Math.PI * Math.pow(alert.getRadius(), 2);
-            return (int) (area * 1000);
+        // Calculate based on alert type and severity
+        // For earthquake alerts, estimate based on magnitude and location
+        if ("EARTHQUAKE".equals(alert.getAlertType()) && alert.getMagnitude() != null) {
+            // Higher magnitude = wider impact radius
+            double estimatedRadius = alert.getMagnitude() * 100; // M5.0 = 500km radius
+            double area = Math.PI * Math.pow(estimatedRadius, 2);
+            return (int) (area * 100); // 100 people per km²
         }
         
-        // Default for alerts without radius (global)
+        // Default calculation based on severity
         return getSeverityBasedRecipients(alert.getSeverity());
     }
 
