@@ -44,8 +44,8 @@ public class CellBroadcastService {
 
     /**
      * Broadcast alert via Cell Broadcast system
+     * Note: @Async removed - Mono handles asynchrony reactively
      */
-    @Async
     public Mono<CellBroadcastResult> broadcast(AlertMessage alert) {
         String alertId = alert.getId() != null ? alert.getId().toString() : "UNKNOWN";
         if (!enabled) {
